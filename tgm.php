@@ -1,10 +1,14 @@
 <?php
 
+function get_item($arr, $key, $default='') {
+    return isset($arr[$key]) ? $arr[$key] : $default;
+}
+
 function image_editor() {
     $pixel_size = 20;
     $r = copy($_POST['url'], "orig");
-    $x = $_POST['x'];
-    $y = $_POST['y'];
+    $x = get_item($_POST, 'x');
+    $y = get_item($_POST, 'y');
     $isize = getimagesize("orig");
     if (!$x && !$y)
 	$y = 13;
@@ -73,14 +77,18 @@ function save_as_png($gd, $dest) {
     echo '<img src="' . $dest . '">';
 }
 
+function finish($gd) {
+    imagedestroy($gd);
+}
+
 function initial_form() {
 ?>
 
 <form name="tgmform" method="post">
-URL to grab: <input type="text" size="128" name="url" value="<?php echo $_GET['url']; ?>"><br>
-Final name: <input type="text" name="name" value="<?php echo $_GET['name']; ?>"><br>
-X: <input type="text" name="x" value="<?php echo $_GET['x']; ?>"><br>
-Y: <input type="text" name="y" value="<?php echo $_GET['y']; ?>"><br>
+URL to grab: <input type="text" size="128" name="url" value="<?php echo get_item($_GET, 'url'); ?>"><br>
+Final name: <input type="text" name="name" value="<?php echo get_item($_GET, 'name'); ?>"><br>
+X: <input type="text" name="x" value="<?php echo get_item($_GET, 'x'); ?>"><br>
+Y: <input type="text" name="y" value="<?php echo get_item($_GET, 'y'); ?>"><br>
 <input type="submit">
 </form>
 
