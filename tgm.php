@@ -1,15 +1,24 @@
 <?php
 
 function get_item($arr, $key, $default='') {
-    return isset($arr[$key]) ? $arr[$key] : $default;
+    return (isset($arr[$key]) && $arr[$key])? $arr[$key] : $default;
 }
 
 function image_editor() {
     $pixel_size = 20;
-    $r = copy($_POST['url'], "orig");
-    $x = get_item($_POST, 'x');
-    $y = get_item($_POST, 'y');
-    $isize = getimagesize("orig");
+    if (get_item($_POST, 'redo')) {
+	$r = copy('../' . get_item($_POST, 'name') . '.gif', "orig");
+	$isize = getimagesize("orig");
+	$x = get_item($_POST, 'x', $isize[0]);
+	$y = get_item($_POST, 'y', $isize[1]);
+echo 'redo ' . $_POST['name'] . ':' . $x . ' ' . $y . ' ' . $isize[0] . ' ' . $isize[1] . 'whew';
+    }
+    else {
+	$r = copy($_POST['url'], "orig");
+	$isize = getimagesize("orig");
+	$x = get_item($_POST, 'x');
+	$y = get_item($_POST, 'y');
+    }
     if (!$x && !$y)
 	$y = 13;
     if (!$y)
@@ -53,9 +62,14 @@ function create_image() {
     foreach ($pxls as $p) {
 	if (!strlen($p))
 	    continue;
-	$r = 51 * floor($p / 36);
-	$g = 51 * floor(($p % 36) / 6);
-	$b = 51 * floor($p % 6);
+	if ($p == 217) {
+	    $r = $g = $b = 230;
+	}
+	else {
+	    $r = 51 * floor($p / 36);
+	    $g = 51 * floor(($p % 36) / 6);
+	    $b = 51 * floor($p % 6);
+	}
 	$c = $r * 65536 + $g * 256 + $b;
 	imagesetpixel($gd, $x, $y, $c);
 	$x += 1;
@@ -85,10 +99,11 @@ function initial_form() {
 ?>
 
 <form name="tgmform" method="post">
-URL to grab: <input type="text" size="128" name="url" value="<?php echo get_item($_GET, 'url'); ?>"><br>
+URL to grab: <input type="text" size="128" name="url" value="<?php echo get_item($_GET, 'url'); ?>">
+<input type="checkbox" name="redo"> redo<br>
 Final name: <input type="text" name="name" value="<?php echo get_item($_GET, 'name'); ?>"><br>
-X: <input type="text" name="x" value="<?php echo get_item($_GET, 'x'); ?>"><br>
-Y: <input type="text" name="y" value="<?php echo get_item($_GET, 'y'); ?>"><br>
+X size: <input type="text" name="x" value="<?php echo get_item($_GET, 'x'); ?>"><br>
+Y size: <input type="text" name="y" value="<?php echo get_item($_GET, 'y'); ?>"><br>
 <input type="submit">
 </form>
 

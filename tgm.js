@@ -8,6 +8,10 @@
 const pxl_size = 20;
 const max_x = 32;
 const max_y = 16;
+const no_coord = [-1, -1];
+const transp_coord = [36, 0];
+const transp_clr = [6, 6, 6];
+const transp_hex = '#E6E6E6';
 var dbg;
 var pxf;
 var ctl;
@@ -21,7 +25,7 @@ var cur_coord = [-1, -1];
 var clr_coord = [0, 0];
 var dmd_coord = [36, 5];
 var dmode = 0;
-var ctl_coord = [-1, -1];
+var ctl_coord = no_coord;
 
 function eq(a, b) {
     return !(a < b || b < a);
@@ -57,6 +61,8 @@ function tgm_start() {
 }
 
 function make_color(v) {
+    if (eq(v, transp_clr))
+	return transp_hex;
     const clrs = ["00", "33", "66", "99", "CC", "FF"];
     var res = "#" + clrs[v[0]] + clrs[v[1]] + clrs[v[2]];
     return res;
@@ -114,29 +120,23 @@ function import_image(ctx) {
 }
 
 function coord_to_color(coord) {
+    if (eq(coord, transp_coord))
+	return transp_clr;
     return [coord[1], coord[0] % 6, Math.floor(coord[0] / 6)];
 }
 
 function color_to_coord(clr) {
+    if (eq(clr, transp_clr))
+	return transp_coord;
     return [(clr[2] * 6) + clr[1], clr[0]];
 }
 
-function dmode_to_coord(dmode) {
-    return [dmode + 36, 5];
+function dmode_to_coord(dm) {
+    return [dm + 36, 5];
 }
 
 function coord_to_dmode(coord) {
     return coord[0] - 36;
-}
-
-function draw_pixel(ctx, clr, coord) {
-    ctx.fillStyle = clr;
-    ctx.fillRect(coord[0] + 39 * pxl_size + 2, coord[1] + 2, 1, 1);
-}
-
-function fill_pixel_box(ctx, clr, coord) {
-    ctx.fillStyle = clr;
-    ctx.fillRect(pxl_size * coord[0] + 3, pxl_size * coord[1] + 3, pxl_size - 6, pxl_size - 6);
 }
 
 function draw_pixel_box(ctx, draw, coord) {
@@ -211,12 +211,42 @@ function set_coord(event, obj) {
 	    return [Math.floor(ms_x / pxl_size), Math.floor(ms_y / pxl_size)];
 	}
     }
-    return [-1, -1];
+    return no_coord;
+}
+
+// draws the single pixel in the example image
+function draw_pixel(ctx, clr, coord) {
+    if (eq(clr, transp_clr))
+	ctx.fillStyle = '#FFFFFF';
+    else
+	ctx.fillStyle = clr;
+    ctx.fillRect(coord[0] + 39 * pxl_size + 2, coord[1] + 2, 1, 1);
+}
+
+function fill_pixel_box(ctx, clr, coord) {
+    if (clr == transp_hex) {
+	ctx.fillStyle = '#FFFFFF';
+	ctx.fillRect(pxl_size * coord[0] + 3, pxl_size * coord[1] + 3, pxl_size - 6, pxl_size - 6);
+// want to make this prettier later
+	ctx.strokeStyle = "#000000";
+	ctx.beginPath();
+//dbg.innerHTML += ' fpb ' + coord;
+	ctx.moveTo(pxl_size * coord[0] + 4, pxl_size * coord[1] + 4);
+	ctx.lineTo(pxl_size * coord[0] + pxl_size - 4, pxl_size * coord[1] + pxl_size - 4);
+	ctx.moveTo(pxl_size * coord[0] + pxl_size - 4, pxl_size * coord[1] + 4);
+	ctx.lineTo(pxl_size * coord[0] + 4, pxl_size * coord[1] + pxl_size - 4);
+	ctx.stroke();
+    }
+    else {
+	ctx.fillStyle = clr;
+	ctx.fillRect(pxl_size * coord[0] + 3, pxl_size * coord[1] + 3, pxl_size - 6, pxl_size - 6);
+    }
 }
 
 function set_pixel() {
-dbg.innerHTML = 'set_pixel ' +cur_coord[0]+','+cur_coord[1]+'/'+make_color(clr_draw);
-    if (ne(cur_coord, [-1, -1])) {
+//dbg.innerHTML += 'set_pixel ' +cur_coord[0]+','+cur_coord[1]+'/'+make_color(clr_draw);
+    if (ne(cur_coord, no_coord)) {
+//dbg.innerHTML += ' draw ';
 	var ctx = can.getContext("2d");
 	pxls[cur_coord[0]][cur_coord[1]] = clr_draw;
 	fill_pixel_box(ctx, make_color(clr_draw), cur_coord);
@@ -226,7 +256,7 @@ dbg.innerHTML = 'set_pixel ' +cur_coord[0]+','+cur_coord[1]+'/'+make_color(clr_d
 }
 
 function can_buttondown(event) {
-dbg.innerHTML = 'can_buttondown ' + dmode;
+//dbg.innerHTML = 'can_buttondown ' + dmode;
     can_drawing = 1;
     can_mouse(event);
 }
@@ -260,10 +290,26 @@ function can_mouse(event) {
 	if (dmode == 0)
 	    set_pixel();
 	else if (dmode == 3) {
-	    if (ne(coord, [-1, -1]))
+	    if (ne(coord, no_coord))
 		set_drawing_color(pxls[coord[0]][coord[1]]);
 	    set_drawing_mode(0);
 	    can_drawing = 0;
+	}
+	else if (dmode == 5) {
+	    if (ne(cur_coord, no_coord)) {
+		var clr_match = pxls[cur_coord[0]][cur_coord[1]];
+		var ctx = can.getContext("2d");
+		for (x = 0; x <= szx; x++) {
+		    for (y = 0; y <= szy; y++) {
+			if (eq(pxls[x][y], clr_match)) {
+			    pxls[x][y] = clr_draw;
+			    fill_pixel_box(ctx, make_color(clr_draw), [x, y]);
+			    var ctlctx = ctl.getContext("2d");
+			    draw_pixel(ctlctx, make_color(clr_draw), [x, y]);
+			}
+		    }
+		}
+	    }
 	}
     }
 }
@@ -277,7 +323,7 @@ function ctl_buttondown(event) {
     if (ctl_coord[0] >= 36 && ctl_coord[1] == 5) {
 	set_drawing_mode(coord_to_dmode(ctl_coord));
     }
-    else if (ne(ctl_coord, [-1, -1])) {
+    else if (ne(ctl_coord, no_coord) && (ctl_coord[0] < 36 || eq(transp_coord, ctl_coord))) {
 	draw_pixel_box(ctx, 0, clr_coord);
 	clr_coord = ctl_coord;
 	clr_draw = coord_to_color(clr_coord);
@@ -303,12 +349,12 @@ function ctl_mouse(event) {
     ctl_coord = coord;
     if (event.type == 'mouseleave')
 	return
-    if (eq(coord, [-1, -1]))
+    if (eq(coord, no_coord))
 	return
 
     if ((ctl_coord[0] < 36) || (ctl_coord[1] == 5) || eq(ctl_coord, [36, 0])) {
 	draw_pixel_box(ctx, 2, ctl_coord);
-dbg.innerHTML = 'can_mouse ' + ctl_coord;
+//dbg.innerHTML = 'can_mouse ' + ctl_coord;
 	if (ctl_coord[0] < 36)
 	    draw_color_value(coord_to_color(ctl_coord));
     }
@@ -323,7 +369,10 @@ function copy_pixels() {
     for (y = 0; y < szy; y++) {
 	for (x = 0; x < szx; x++) {
 	    pxl = pxls[x][y];
-	    pxf.value += (pxl[0] * 36 + pxl[1] * 6 + pxl[2]) + ' ';
+	    if (eq(pxl, transp_clr))
+		pxf.value += '217 ';
+	    else
+		pxf.value += (pxl[0] * 36 + pxl[1] * 6 + pxl[2]) + ' ';
 	}
     }
 }
