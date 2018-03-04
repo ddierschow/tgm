@@ -27,6 +27,11 @@ var dmd_coord = [36, 5];
 var dmode = 0;
 var ctl_coord = no_coord;
 
+function copy(ctx, coord_from, w, h, coord_to) {
+    var imgData=ctx.getImageData(coord_from[0], coord_from[1], w, h);
+    ctx.putImageData(imgData, coord_to[0], coord_to[1]);
+}
+
 function eq(a, b) {
     return !(a < b || b < a);
 }
@@ -230,7 +235,6 @@ function fill_pixel_box(ctx, clr, coord) {
 // want to make this prettier later
 	ctx.strokeStyle = "#000000";
 	ctx.beginPath();
-//dbg.innerHTML += ' fpb ' + coord;
 	ctx.moveTo(pxl_size * coord[0] + 4, pxl_size * coord[1] + 4);
 	ctx.lineTo(pxl_size * coord[0] + pxl_size - 4, pxl_size * coord[1] + pxl_size - 4);
 	ctx.moveTo(pxl_size * coord[0] + pxl_size - 4, pxl_size * coord[1] + 4);
